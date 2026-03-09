@@ -51,6 +51,13 @@ public class DriverManager {
     public static WebDriver getDriver() {
         return driver.get();
     }
+    public static void setDriver(WebDriver webDriver) {
+        driver.set(webDriver);
+    }
+
+    public static void removeDriver() {
+        driver.remove();
+    }
 
     public static void quitDriver() {
         if (getDriver() != null) {
