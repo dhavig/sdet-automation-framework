@@ -1,0 +1,219 @@
+# ============================================================
+# Full Test Suite CI/CD Pipeline
+# Runs ALL modules: API + Performance + Selenium + Cucumber
+# OCC Relevance: Complete regression suite on every release
+# ============================================================
+
+name: Full Automation Suite
+
+on:
+  # Run full suite every night at midnight CST
+  schedule:
+    - cron: '0 6 * * *'  # 6 AM UTC = midnight CST
+  # Run on release branch pushes
+  push:
+    branches: [ release/**, hotfix/** ]
+  # Manual trigger with options
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target Environment'
+        required: true
+        default: 'CLOUD'
+        type: choice
+        options:
+          - CLOUD
+          - LEGACY
+          - LOCAL
+      run_performance:
+        description: 'Include performance tests?'
+        required: false
+        default: 'true'
+        type: boolean
+
+jobs:
+  # ── JOB 1: API Tests ──────────────────────────────────────
+  api-tests:
+    name: REST Assured API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Java 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Run API Tests
+        run: |
+          mvn test \
+            -Dtest="GetUsersTest,AuthApiTest,SchemaValidationTest,CRUDOperationsTest" \
+            -Dapi.base.url=${{ vars.API_BASE_URL || 'https://reqres.in' }} \
+            -Dmaven.test.failure.ignore=false
+
+      - name: Upload API Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-api
+          path: allure-results/
+          retention-days: 30
+
+  # ── JOB 2: Selenium UI Tests ──────────────────────────────
+  selenium-tests:
+    name: Selenium UI Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    # Run in parallel with API tests — saves time!
+    # No dependency — both start simultaneously
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Java 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      # Install Chrome for headless Selenium
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      - name: Run Selenium Tests
+        run: |
+          mvn test \
+            -Dtest="LoginTest" \
+            -Dwebdriver.chrome.headless=true \
+            -Dmaven.test.failure.ignore=false
+
+      - name: Upload Selenium Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-selenium
+          path: allure-results/
+          retention-days: 30
+
+  # ── JOB 3: Performance Tests ──────────────────────────────
+  performance-tests:
+    name: JMeter Performance Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # Only run if api-tests passed AND input says run_performance
+    needs: [ api-tests ]
+    if: ${{ github.event.inputs.run_performance != 'false' }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set Up Java 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Install Apache JMeter
+        run: |
+          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          echo "JMETER_HOME=${{ github.workspace }}/apache-jmeter-5.6.3" >> $GITHUB_ENV
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            us-east-1
+
+      - name: Run Performance Tests
+        run: |
+          mvn test \
+            -Dtest=PerformanceTestSuite \
+            -Denv=${{ github.event.inputs.environment || 'CLOUD' }} \
+            -Djmeter.home=${{ env.JMETER_HOME }} \
+            -Ds3.bucket=${{ secrets.S3_BUCKET_NAME }} \
+            -Dmaven.test.failure.ignore=false
+
+      - name: Upload Performance Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-performance
+          path: allure-results/
+          retention-days: 90
+
+  # ── JOB 4: Merge + Publish Report ─────────────────────────
+  publish-report:
+    name: Merge Allure Results and Publish
+    runs-on: ubuntu-latest
+    # Wait for ALL test jobs to finish
+    needs: [ api-tests, selenium-tests, performance-tests ]
+    if: always()  # Run even if tests failed — audit evidence
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Download all allure results from previous jobs
+      - name: Download API Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-api
+          path: allure-results/
+        continue-on-error: true
+
+      - name: Download Selenium Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-selenium
+          path: allure-results/
+        continue-on-error: true
+
+      - name: Download Performance Results
+        uses: actions/download-artifact@v4
+        with:
+          name: allure-results-performance
+          path: allure-results/
+        continue-on-error: true
+
+      # Generate unified Allure report
+      - name: Generate Unified Allure Report
+        uses: simple-elf/allure-report-action@master
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          allure_history: allure-history
+
+      # Publish to GitHub Pages
+      - name: Publish Unified Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+
+      # Final suite summary
+      - name: Print Suite Summary
+        if: always()
+        run: |
+          echo "================================================"
+          echo "  FULL SUITE SUMMARY"
+          echo "================================================"
+          echo "  Run Number  : ${{ github.run_number }}"
+          echo "  Environment : ${{ github.event.inputs.environment || 'CLOUD' }}"
+          echo "  Branch      : ${{ github.ref_name }}"
+          echo "  Triggered by: ${{ github.actor }}"
+          echo "  API Tests   : ${{ needs.api-tests.result }}"
+          echo "  UI Tests    : ${{ needs.selenium-tests.result }}"
+          echo "  Perf Tests  : ${{ needs.performance-tests.result }}"
+          echo "================================================"

@@ -1,0 +1,130 @@
+# ============================================================
+# Performance Tests CI/CD Pipeline
+# Triggers: Push to main + manual trigger (workflow_dispatch)
+# OCC Relevance: Automated JMeter tests in CI pipeline
+# ============================================================
+
+name: JMeter Performance Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'src/main/java/com/sdet/performance/**'
+      - 'src/test/java/com/sdet/performance/**'
+      - 'pom.xml'
+  # Manual trigger — run performance tests on demand
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Test Environment'
+        required: true
+        default: 'CLOUD'
+        type: choice
+        options:
+          - CLOUD
+          - LEGACY
+          - LOCAL
+      load_users:
+        description: 'Number of concurrent users for load test'
+        required: false
+        default: '50'
+
+jobs:
+  performance-tests:
+    name: Run JMeter Performance Suite
+    runs-on: ubuntu-latest
+    # Performance tests take longer — 30 min timeout
+    timeout-minutes: 30
+
+    steps:
+      # Step 1 — Checkout code
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      # Step 2 — Setup Java 11
+      - name: Set Up Java 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      # Step 3 — Install JMeter
+      - name: Install Apache JMeter
+        run: |
+          wget -q https://archive.apache.org/dist/jmeter/binaries/apache-jmeter-5.6.3.tgz
+          tar -xzf apache-jmeter-5.6.3.tgz
+          echo "JMETER_HOME=${{ github.workspace }}/apache-jmeter-5.6.3" >> $GITHUB_ENV
+          echo "${{ github.workspace }}/apache-jmeter-5.6.3/bin" >> $GITHUB_PATH
+
+      # Step 4 — Configure AWS credentials for S3 archival
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region:            ${{ secrets.AWS_REGION || 'us-east-1' }}
+
+      # Step 5 — Run performance tests
+      - name: Run JMeter Performance Tests
+        run: |
+          mvn test \
+            -Dtest=PerformanceTestSuite \
+            -Denv=${{ github.event.inputs.environment || 'CLOUD' }} \
+            -Djmeter.home=${{ env.JMETER_HOME }} \
+            -Ds3.bucket=${{ secrets.S3_BUCKET_NAME }} \
+            -Dmaven.test.failure.ignore=false
+        env:
+          AWS_ACCESS_KEY_ID:     ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION:            us-east-1
+          S3_BUCKET_NAME:        ${{ secrets.S3_BUCKET_NAME }}
+
+      # Step 6 — Upload JMeter results
+      - name: Upload JMeter Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: jmeter-results-${{ github.event.inputs.environment || 'CLOUD' }}-${{ github.run_number }}
+          path: |
+            target/jmeter-results/
+            target/jmeter-reports/
+          retention-days: 90  # Keep 90 days for audit compliance
+
+      # Step 7 — Upload Allure results
+      - name: Upload Allure Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: allure-results-perf-${{ github.run_number }}
+          path: allure-results/
+          retention-days: 90
+
+      # Step 8 — Generate Allure Report
+      - name: Generate Allure Report
+        uses: simple-elf/allure-report-action@master
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+
+      # Step 9 — Publish to GitHub Pages
+      - name: Deploy Allure Report to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          destination_dir: performance
+
+      # Step 10 — SLA breach notification
+      - name: Notify on SLA Breach
+        if: failure()
+        run: |
+          echo "PERFORMANCE TEST FAILED — SLA BREACH DETECTED"
+          echo "Environment : ${{ github.event.inputs.environment || 'CLOUD' }}"
+          echo "Run Number  : ${{ github.run_number }}"
+          echo "Branch      : ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
