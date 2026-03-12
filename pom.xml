@@ -95,6 +95,30 @@
             <artifactId>log4j-core</artifactId>
             <version>2.23.0</version>
         </dependency>
+
+        <!-- JMeter Performance Testing -->
+        <dependency>
+            <groupId>org.apache.jmeter</groupId>
+            <artifactId>ApacheJMeter_core</artifactId>
+            <version>5.6.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jmeter</groupId>
+            <artifactId>ApacheJMeter_http</artifactId>
+            <version>5.6.3</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.jmeter</groupId>
+            <artifactId>ApacheJMeter_java</artifactId>
+            <version>5.6.3</version>
+        </dependency>
+
+        <!-- AWS S3 for report archival -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>2.25.6</version>
+        </dependency>
     </dependencies>
 
     <build>
