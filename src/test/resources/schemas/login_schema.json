@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Login Response Schema",
+  "type": "object",
+  "required": ["token"],
+  "properties": {
+    "token": {
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
+```
+
+---
+
+### Third — create the test class:
+
+Create at:
+```
+src/test/java/com/sdet/api/tests/SchemaValidationTest.java

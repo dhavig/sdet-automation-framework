@@ -119,6 +119,19 @@
             <artifactId>s3</artifactId>
             <version>2.25.6</version>
         </dependency>
+
+        <!-- Allure RestAssured integration -->
+        <dependency>
+            <groupId>io.qameta.allure</groupId>
+            <artifactId>allure-rest-assured</artifactId>
+            <version>${allure.version}</version>
+        </dependency>
+        <!-- JSON Schema Validator -->
+        <dependency>
+            <groupId>io.rest-assured</groupId>
+            <artifactId>json-schema-validator</artifactId>
+            <version>${restassured.version}</version>
+        </dependency>
     </dependencies>
 
     <build>
