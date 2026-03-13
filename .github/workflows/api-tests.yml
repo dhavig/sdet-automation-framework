@@ -64,26 +64,3 @@ jobs:
           allure_report: allure-report
           allure_history: allure-history
 
-      # Step 6 — Publish report to GitHub Pages
-      - name: Deploy Allure Report to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        if: always()
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_branch: gh-pages
-          publish_dir: allure-report
-
-      # Step 7 — Comment results on PR
-      - name: Comment Test Results on PR
-        uses: actions/github-script@v7
-        if: github.event_name == 'pull_request' && always()
-        with:
-          script: |
-            const status = '${{ job.status }}';
-            const emoji  = status === 'success' ? '✅' : '❌';
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: `${emoji} **API Tests ${status.toUpperCase()}**\n\nRun: #${{ github.run_number }}\nBranch: ${{ github.ref_name }}`
-            });
