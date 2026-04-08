@@ -1,0 +1,5 @@
+"BROKEN","EPIC","FAILED","FEATURE","PASSED","SKIPPED","STORY","UNKNOWN"
+"0","","0","","4","0","User Login","0"
+"0","Parallel Testing","0","Side-by-Side Environment Comparison","1","0","Login flow comparison across environments","0"
+"1","","0","","0","0","","0"
+"0","Parallel Testing","0","Side-by-Side Environment Comparison","1","0","Product page output comparison across environments","0"
