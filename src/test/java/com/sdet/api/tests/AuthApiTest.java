@@ -41,12 +41,7 @@ public class AuthApiTest extends ApiBaseTest {
     public void loginWithValidCredentials() {
         log.info("Testing POST /login with valid credentials");
 
-        String requestBody = """
-            {
-                "email": "eve.holt@reqres.in",
-                "password": "cityslicka"
-            }
-            """;
+        String requestBody = "{\"email\": \"eve.holt@reqres.in\", \"password\": \"cityslicka\"}";
 
         authToken = given()
                 .spec(requestSpec)
@@ -87,12 +82,7 @@ public class AuthApiTest extends ApiBaseTest {
                                             int expectedStatus) {
         log.info("Testing POST /login with invalid credentials: {}", email);
 
-        String requestBody = String.format("""
-            {
-                "email": "%s",
-                "password": "%s"
-            }
-            """, email, password);
+        String requestBody = String.format("{\"email\": \"%s\", \"password\": \"%s\"}", email, password);
 
         given()
                 .spec(requestSpec)
@@ -121,11 +111,7 @@ public class AuthApiTest extends ApiBaseTest {
     public void loginWithMissingPassword() {
         log.info("Testing POST /login with missing password");
 
-        String requestBody = """
-            {
-                "email": "eve.holt@reqres.in"
-            }
-            """;
+        String requestBody = "{\"email\": \"eve.holt@reqres.in\"}";
 
         given()
                 .spec(requestSpec)
@@ -151,11 +137,7 @@ public class AuthApiTest extends ApiBaseTest {
     public void loginWithMissingEmail() {
         log.info("Testing POST /login with missing email");
 
-        String requestBody = """
-            {
-                "password": "cityslicka"
-            }
-            """;
+        String requestBody = "{\"password\": \"cityslicka\"}";
 
         given()
                 .spec(requestSpec)
@@ -214,12 +196,7 @@ public class AuthApiTest extends ApiBaseTest {
     public void registerNewUser() {
         log.info("Testing POST /register");
 
-        String requestBody = """
-            {
-                "email": "eve.holt@reqres.in",
-                "password": "pistol"
-            }
-            """;
+        String requestBody = "{\"email\": \"eve.holt@reqres.in\", \"password\": \"pistol\"}";
 
         given()
                 .spec(requestSpec)
@@ -247,11 +224,7 @@ public class AuthApiTest extends ApiBaseTest {
     public void registerWithMissingPassword() {
         log.info("Testing POST /register with missing password");
 
-        String requestBody = """
-            {
-                "email": "sydney@fife.com"
-            }
-            """;
+        String requestBody = "{\"email\": \"sydney@fife.com\"}";
 
         given()
                 .spec(requestSpec)

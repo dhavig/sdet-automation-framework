@@ -44,12 +44,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
     public void createUser() {
         log.info("Testing POST /users — create new user");
 
-        String requestBody = """
-            {
-                "name": "Dhanya Sridhar",
-                "job": "Senior SDET"
-            }
-            """;
+        String requestBody = "{\"name\": \"Dhanya Sridhar\", \"job\": \"Senior SDET\"}";
 
         createdUserId = given()
                 .spec(requestSpec)
@@ -89,12 +84,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
                                      int expectedStatus) {
         log.info("Testing POST /users | name={} | job={}", name, job);
 
-        String requestBody = String.format("""
-            {
-                "name": "%s",
-                "job": "%s"
-            }
-            """, name, job);
+        String requestBody = String.format("{\"name\": \"%s\", \"job\": \"%s\"}", name, job);
 
         given()
                 .spec(requestSpec)
@@ -130,12 +120,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
                                   int expectedStatus) {
         log.info("Testing PUT /users/{} | name={} | job={}", userId, name, job);
 
-        String requestBody = String.format("""
-            {
-                "name": "%s",
-                "job": "%s"
-            }
-            """, name, job);
+        String requestBody = String.format("{\"name\": \"%s\", \"job\": \"%s\"}", name, job);
 
         given()
                 .spec(requestSpec)
@@ -172,11 +157,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
         log.info("Testing PATCH /users/2 — partial update job title only");
 
         // Only sending job — name should remain unchanged
-        String requestBody = """
-            {
-                "job": "Lead SDET"
-            }
-            """;
+        String requestBody = "{\"job\": \"Lead SDET\"}";
 
         given()
                 .spec(requestSpec)
@@ -205,11 +186,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
         log.info("Demonstrating PUT vs PATCH difference");
 
         // PATCH — only update name, job should be unaffected
-        String patchBody = """
-            {
-                "name": "Dhanya Updated"
-            }
-            """;
+        String patchBody = "{\"name\": \"Dhanya Updated\"}";
 
         String patchUpdatedAt = given()
                 .spec(requestSpec)
@@ -226,12 +203,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
                 .getString("updatedAt");
 
         // PUT — replaces entire record, all fields required
-        String putBody = """
-            {
-                "name": "Dhanya Full Update",
-                "job": "Principal SDET"
-            }
-            """;
+        String putBody = "{\"name\": \"Dhanya Full Update\", \"job\": \"Principal SDET\"}";
 
         String putUpdatedAt = given()
                 .spec(requestSpec)
@@ -294,12 +266,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
         log.info("Testing full CRUD lifecycle");
 
         // STEP 1 — CREATE
-        String createBody = """
-            {
-                "name": "CRUD Test User",
-                "job": "QA Engineer"
-            }
-            """;
+        String createBody = "{\"name\": \"CRUD Test User\", \"job\": \"QA Engineer\"}";
 
         String newUserId = given()
                 .spec(requestSpec)
@@ -325,12 +292,7 @@ public class CRUDOperationsTest extends ApiBaseTest {
         log.info("STEP 2 READ — user verified");
 
         // STEP 3 — UPDATE
-        String updateBody = """
-            {
-                "name": "CRUD Test User Updated",
-                "job": "Senior QA Engineer"
-            }
-            """;
+        String updateBody = "{\"name\": \"CRUD Test User Updated\", \"job\": \"Senior QA Engineer\"}";
 
         given()
                 .spec(requestSpec)

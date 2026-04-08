@@ -88,12 +88,7 @@ public class SchemaValidationTest extends ApiBaseTest {
     public void validateLoginSchema() {
         log.info("Validating schema for POST /login");
 
-        String requestBody = """
-            {
-                "email": "eve.holt@reqres.in",
-                "password": "cityslicka"
-            }
-            """;
+        String requestBody = "{\"email\": \"eve.holt@reqres.in\", \"password\": \"cityslicka\"}";
 
         given()
                 .spec(requestSpec)
