@@ -36,7 +36,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # ── 3. Run TestNG Tests ──────────────────────────────────
+      # ── 3. Install Chrome (required for Selenium tests) ─────
+      - name: Install Chrome
+        uses: browser-actions/setup-chrome@v1
+
+      # ── 4. Run TestNG Tests ──────────────────────────────────
       # maven.test.failure.ignore=true keeps the job alive so the
       # report and log update steps still run even when tests fail.
       - name: Run Full TestNG Suite
@@ -44,23 +48,25 @@ jobs:
         run: |
           mvn test \
             -Dsurefire.suiteXmlFiles=testng.xml \
+            -Dwebdriver.chrome.headless=true \
             -Dmaven.test.failure.ignore=true \
             -B --no-transfer-progress
         continue-on-error: true
 
-      # ── 4. Parse Surefire Results ────────────────────────────
+      # ── 5. Parse Surefire Results ────────────────────────────
       - name: Parse Test Results
         id: parse_results
         if: always()
         run: |
           TOTAL=0; PASSED=0; FAILED=0; SKIPPED=0; ERRORS=0
 
-          # Aggregate counts from every surefire XML report
-          for f in target/surefire-reports/TEST-*.xml; do
+          # TestNG+Surefire writes to target/surefire-reports/
+          # Files may be named TEST-*.xml or <SuiteName>.xml
+          for f in target/surefire-reports/*.xml; do
             [ -f "$f" ] || continue
-            t=$(grep -oP 'tests="\K[0-9]+' "$f" | head -1); TOTAL=$((TOTAL + ${t:-0}))
+            t=$(grep -oP 'tests="\K[0-9]+'  "$f" | head -1); TOTAL=$((TOTAL  + ${t:-0}))
             fa=$(grep -oP 'failures="\K[0-9]+' "$f" | head -1); FAILED=$((FAILED + ${fa:-0}))
-            e=$(grep -oP 'errors="\K[0-9]+' "$f" | head -1); ERRORS=$((ERRORS + ${e:-0}))
+            e=$(grep -oP 'errors="\K[0-9]+'  "$f" | head -1); ERRORS=$((ERRORS + ${e:-0}))
             s=$(grep -oP 'skipped="\K[0-9]+' "$f" | head -1); SKIPPED=$((SKIPPED + ${s:-0}))
           done
 
