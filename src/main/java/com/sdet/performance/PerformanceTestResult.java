@@ -61,47 +61,16 @@ public class PerformanceTestResult {
      * OCC needs audit-ready documentation
      */
     public String getSummary() {
-        return String.format(
-                """
-                ====================================
-                PERFORMANCE TEST RESULT SUMMARY
-                ====================================
-                Test Name    : %s
-                Test Type    : %s
-                Environment  : %s
-                Timestamp    : %s
-                Duration     : %ds
-                ------------------------------------
-                REQUESTS
-                Total        : %d
-                Passed       : %d
-                Failed       : %d
-                Error Rate   : %.2f%%
-                ------------------------------------
-                RESPONSE TIMES
-                Min          : %dms
-                Avg          : %dms
-                Max          : %dms
-                P90          : %dms
-                P95          : %dms
-                P99          : %dms
-                ------------------------------------
-                THROUGHPUT
-                Req/sec      : %.2f
-                Throughput   : %.2f Mbps
-                ------------------------------------
-                SLA STATUS   : %s
-                ====================================
-                """,
-                testName, testType, environment, timestamp,
-                testDurationSeconds,
-                totalRequests, passedRequests, failedRequests,
-                getErrorRate(),
-                minResponseTimeMs, avgResponseTimeMs, maxResponseTimeMs,
-                p90ResponseTimeMs, p95ResponseTimeMs, p99ResponseTimeMs,
-                requestsPerSecond, throughputMbps,
-                slaBreached ? "❌ BREACHED" : "✅ PASSED"
-        );
+        return "Test Name    : " + testName + "\n" +
+                "Test Type    : " + testType + "\n" +
+                "Environment  : " + environment + "\n" +
+                "P90          : " + p90ResponseTimeMs + "ms\n" +
+                "P95          : " + p95ResponseTimeMs + "ms\n" +
+                "P99          : " + p99ResponseTimeMs + "ms\n" +
+                "Throughput   : " + requestsPerSecond + " req/s\n" +
+                "Error Rate   : " + String.format("%.2f", getErrorRate()) + "%\n" +
+                "SLA Breached : " + slaBreached + "\n" +
+                "Violations   : " + slaViolations;
     }
 
     /**
