@@ -1,0 +1,193 @@
+# ============================================================
+# Daily TestNG Regression Run
+# Runs at 9 AM UTC every day, generates Allure report,
+# updates daily-run-log.md, and commits results back to main.
+# ============================================================
+
+name: Daily TestNG Run
+
+on:
+  schedule:
+    - cron: '0 9 * * *'   # 9:00 AM UTC daily
+  workflow_dispatch:        # Allow manual trigger for testing
+
+permissions:
+  contents: write           # Required to push the log commit back to main
+
+jobs:
+  run-tests:
+    name: Run TestNG Suite & Update Run Log
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0   # Full history so the push back works cleanly
+
+      # ── 2. Java Setup ────────────────────────────────────────
+      - name: Set Up Java 11
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+
+      # ── 3. Run TestNG Tests ──────────────────────────────────
+      # maven.test.failure.ignore=true keeps the job alive so the
+      # report and log update steps still run even when tests fail.
+      - name: Run Full TestNG Suite
+        id: run_tests
+        run: |
+          mvn test \
+            -Dsurefire.suiteXmlFiles=testng.xml \
+            -Dmaven.test.failure.ignore=true \
+            -B --no-transfer-progress
+        continue-on-error: true
+
+      # ── 4. Parse Surefire Results ────────────────────────────
+      - name: Parse Test Results
+        id: parse_results
+        if: always()
+        run: |
+          TOTAL=0; PASSED=0; FAILED=0; SKIPPED=0; ERRORS=0
+
+          # Aggregate counts from every surefire XML report
+          for f in target/surefire-reports/TEST-*.xml; do
+            [ -f "$f" ] || continue
+            t=$(grep -oP 'tests="\K[0-9]+' "$f" | head -1); TOTAL=$((TOTAL + ${t:-0}))
+            fa=$(grep -oP 'failures="\K[0-9]+' "$f" | head -1); FAILED=$((FAILED + ${fa:-0}))
+            e=$(grep -oP 'errors="\K[0-9]+' "$f" | head -1); ERRORS=$((ERRORS + ${e:-0}))
+            s=$(grep -oP 'skipped="\K[0-9]+' "$f" | head -1); SKIPPED=$((SKIPPED + ${s:-0}))
+          done
+
+          PASSED=$((TOTAL - FAILED - ERRORS - SKIPPED))
+          TOTAL_FAIL=$((FAILED + ERRORS))
+
+          if [ "$TOTAL_FAIL" -eq 0 ] && [ "$TOTAL" -gt 0 ]; then
+            STATUS="PASSED"
+          elif [ "$TOTAL" -eq 0 ]; then
+            STATUS="NO TESTS RUN"
+          else
+            STATUS="FAILED"
+          fi
+
+          echo "total=$TOTAL"     >> $GITHUB_OUTPUT
+          echo "passed=$PASSED"   >> $GITHUB_OUTPUT
+          echo "failed=$TOTAL_FAIL" >> $GITHUB_OUTPUT
+          echo "skipped=$SKIPPED" >> $GITHUB_OUTPUT
+          echo "status=$STATUS"   >> $GITHUB_OUTPUT
+
+      # ── 5. Generate Allure Report ────────────────────────────
+      - name: Generate Allure Report
+        if: always()
+        uses: simple-elf/allure-report-action@master
+        with:
+          allure_results: allure-results
+          allure_report: allure-report
+          allure_history: allure-history
+          keep_reports: 30
+
+      # ── 6. Publish Allure to GitHub Pages ────────────────────
+      - name: Publish Allure Report to GitHub Pages
+        if: always()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-report
+          destination_dir: daily/${{ github.run_number }}
+          keep_files: true           # Never wipe nightly/ or performance/ dirs
+
+      # ── 7. Update daily-run-log.md ───────────────────────────
+      - name: Update daily-run-log.md
+        if: always()
+        env:
+          STATUS:  ${{ steps.parse_results.outputs.status }}
+          TOTAL:   ${{ steps.parse_results.outputs.total }}
+          PASSED:  ${{ steps.parse_results.outputs.passed }}
+          FAILED:  ${{ steps.parse_results.outputs.failed }}
+          SKIPPED: ${{ steps.parse_results.outputs.skipped }}
+          RUN_NUM: ${{ github.run_number }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          LOG_FILE="daily-run-log.md"
+          DATE=$(date -u '+%Y-%m-%d')
+          TIME=$(date -u '+%H:%M UTC')
+          REPORT_URL="https://${{ github.repository_owner }}.github.io/$(echo '${{ github.repository }}' | cut -d/ -f2)/daily/${{ github.run_number }}"
+
+          # Status badge emoji
+          if [ "$STATUS" = "PASSED" ]; then BADGE="✅"; else BADGE="❌"; fi
+
+          # Create the log file with header if it doesn't exist yet
+          if [ ! -f "$LOG_FILE" ]; then
+            cat > "$LOG_FILE" << 'HEADER'
+          # Daily Test Run Log
+
+          Automated daily TestNG regression results for the SDET Automation Suite.
+          Runs at **9:00 AM UTC** · Report published to GitHub Pages.
+
+          | Date | Time | Status | Total | Passed | Failed | Skipped | Report | Run |
+          |------|------|--------|------:|-------:|-------:|--------:|--------|-----|
+          HEADER
+          fi
+
+          # Prepend new row beneath the header table line (keeps newest at top)
+          # We insert after the header row separator line
+          NEW_ROW="| $DATE | $TIME | $BADGE $STATUS | $TOTAL | $PASSED | $FAILED | $SKIPPED | [Allure]($REPORT_URL) | [#$RUN_NUM]($RUN_URL) |"
+
+          # Insert the new row after the table header separator
+          awk -v row="$NEW_ROW" '
+            /^\|---/ && !inserted { print; print row; inserted=1; next }
+            { print }
+          ' "$LOG_FILE" > tmp_log.md && mv tmp_log.md "$LOG_FILE"
+
+      # ── 8. Commit & Push Results Back to main ────────────────
+      - name: Commit and Push Run Log
+        if: always()
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add daily-run-log.md
+
+          # Only commit if there is actually something staged
+          if git diff --cached --quiet; then
+            echo "Nothing to commit — log unchanged."
+            exit 0
+          fi
+
+          DATE=$(date -u '+%Y-%m-%d')
+          STATUS="${{ steps.parse_results.outputs.status }}"
+          TOTAL="${{ steps.parse_results.outputs.total }}"
+          PASSED="${{ steps.parse_results.outputs.passed }}"
+          FAILED="${{ steps.parse_results.outputs.failed }}"
+
+          git commit -m "ci: daily run $DATE — $STATUS ($PASSED/$TOTAL passed) [skip ci]"
+
+          # Pull with rebase to avoid conflicts if another push landed first
+          git pull --rebase origin main
+          git push origin main
+
+      # ── 9. Job Summary ───────────────────────────────────────
+      - name: Write Job Summary
+        if: always()
+        run: |
+          STATUS="${{ steps.parse_results.outputs.status }}"
+          if [ "$STATUS" = "PASSED" ]; then BADGE="✅"; else BADGE="❌"; fi
+          cat >> $GITHUB_STEP_SUMMARY << EOF
+          ## $BADGE Daily TestNG Run — $(date -u '+%Y-%m-%d')
+
+          | Metric  | Value |
+          |---------|------:|
+          | Status  | **$STATUS** |
+          | Total   | ${{ steps.parse_results.outputs.total }} |
+          | Passed  | ${{ steps.parse_results.outputs.passed }} |
+          | Failed  | ${{ steps.parse_results.outputs.failed }} |
+          | Skipped | ${{ steps.parse_results.outputs.skipped }} |
+
+          > Allure report published to GitHub Pages under \`daily/${{ github.run_number }}\`.
+          EOF

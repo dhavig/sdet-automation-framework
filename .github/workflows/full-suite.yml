@@ -201,6 +201,8 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: allure-report
+          destination_dir: nightly   # Isolated from daily/ and performance/ dirs
+          keep_files: true           # Never wipe other workflows' published reports
 
       # Final suite summary
       - name: Print Suite Summary
@@ -217,3 +219,4 @@ jobs:
           echo "  UI Tests    : ${{ needs.selenium-tests.result }}"
           echo "  Perf Tests  : ${{ needs.performance-tests.result }}"
           echo "================================================"
+          

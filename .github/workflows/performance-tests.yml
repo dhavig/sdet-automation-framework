@@ -118,6 +118,7 @@ jobs:
           publish_branch: gh-pages
           publish_dir: allure-report
           destination_dir: performance
+          keep_files: true           # Never wipe other workflows' published reports
 
       # Step 10 — SLA breach notification
       - name: Notify on SLA Breach
