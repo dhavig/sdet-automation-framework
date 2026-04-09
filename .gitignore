@@ -28,3 +28,6 @@ target/
 
 # Allure test results
 allure-results/
+
+# IDE files
+.idea/
