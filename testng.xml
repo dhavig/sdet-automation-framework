@@ -2,17 +2,34 @@
 <!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
 <suite name="SDET Automation Suite" parallel="classes" thread-count="2">
 
-    <!-- Existing Login Tests -->
+    <!-- Selenium UI Tests -->
     <test name="Login Tests">
         <classes>
             <class name="com.sdet.selenium.LoginTest"/>
         </classes>
     </test>
 
-    <!-- New Parallel Testing Module -->
+    <!-- Parallel Environment Tests -->
     <test name="Parallel Environment Tests">
         <classes>
             <class name="com.sdet.parallel.ParallelLoginTest"/>
+        </classes>
+    </test>
+
+    <!-- REST Assured API Tests -->
+    <test name="API Tests">
+        <classes>
+            <class name="com.sdet.api.tests.GetUsersTest"/>
+            <class name="com.sdet.api.tests.AuthApiTest"/>
+            <class name="com.sdet.api.tests.SchemaValidationTest"/>
+            <class name="com.sdet.api.tests.CRUDOperationsTest"/>
+        </classes>
+    </test>
+
+    <!-- BDD Cucumber Tests -->
+    <test name="BDD Cucumber Tests">
+        <classes>
+            <class name="com.sdet.cucumber.runner.CucumberRunner"/>
         </classes>
     </test>
 
