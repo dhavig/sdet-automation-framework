@@ -1,0 +1,8 @@
+# Daily Test Run Log
+
+Automated daily TestNG regression results for the SDET Automation Suite.
+Runs at **9:00 AM UTC** · Report published to GitHub Pages.
+
+| Date | Time | Status | Total | Passed | Failed | Skipped | Report | Run |
+|------|------|--------|------:|-------:|-------:|--------:|--------|-----|
+| 2026-04-09 | 10:18 UTC | ❌ FAILED | 53 | -44 | 1 | 96 | [Allure](https://dhavig.github.io/sdet-automation-framework/daily/5) | [#5](https://github.com/dhavig/sdet-automation-framework/actions/runs/24184953625) |
