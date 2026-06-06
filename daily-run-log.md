@@ -5,6 +5,7 @@ Runs at **9:00 AM UTC** · Report published to GitHub Pages.
 
 | Date | Time | Status | Total | Passed | Failed | Skipped | Report | Run |
 |------|------|--------|------:|-------:|-------:|--------:|--------|-----|
+| 2026-06-06 | 10:57 UTC | ❌ FAILED | 53 | -44 | 1 | 96 | [Allure](https://dhavig.github.io/sdet-automation-framework/daily/62) | [#62](https://github.com/dhavig/sdet-automation-framework/actions/runs/27060400725) |
 | 2026-06-05 | 12:14 UTC | ❌ FAILED | 53 | -44 | 1 | 96 | [Allure](https://dhavig.github.io/sdet-automation-framework/daily/61) | [#61](https://github.com/dhavig/sdet-automation-framework/actions/runs/27014179813) |
 | 2026-06-04 | 12:07 UTC | ❌ FAILED | 53 | -44 | 1 | 96 | [Allure](https://dhavig.github.io/sdet-automation-framework/daily/60) | [#60](https://github.com/dhavig/sdet-automation-framework/actions/runs/26950673918) |
 | 2026-06-03 | 13:21 UTC | ❌ FAILED | 53 | -44 | 1 | 96 | [Allure](https://dhavig.github.io/sdet-automation-framework/daily/59) | [#59](https://github.com/dhavig/sdet-automation-framework/actions/runs/26887506263) |
